@@ -193,7 +193,7 @@ function render() {
     card.className = 'qcard';
     const icon = q.dimension === 'fameTier' ? '⏳' : (DIM_ICON[q.dimension] || '❓');
     card.innerHTML = `
-      <div class="qnum">${icon} 第 ${qi + 1} 题 / ${TOTAL_QUESTIONS}${q.dimension === 'fameTier' ? ' · 节奏题' : (qi >= 16 ? ' · 追问' : '')}</div>
+      <div class="qnum">${icon} 第 ${qi + 1} 题 / ${TOTAL_QUESTIONS}${''}</div>
       <div class="qtext">${q.prompt}</div>
       ${q.options.map((o, oi) => '<button class="opt' + (answers[qi] === oi ? ' sel' : '') + '" data-qi="' + qi + '" data-oi="' + oi + '">' + o.text + '</button>').join('')}
     `;
@@ -368,13 +368,13 @@ function showResult() {
   })).sort((a, b) => b.score - a.score);
   const contrast = scored[0].p;
 
-  const DIM_LABEL = { openness: '开放度', conscientiousness: '自律', extraversion: '外向', agreeableness: '宜人', emotionalStability: '情绪稳定', thinkingFeeling: '理性', selfPresentation: '高调', worldEngagement: '入世' };
-  const DIM_DESC = { openness: '对新鲜事物的态度', conscientiousness: '做事的计划性', extraversion: '社交能量', agreeableness: '与人相处的方式', emotionalStability: '情绪起伏', thinkingFeeling: '做决定的方式', selfPresentation: '自我表达', worldEngagement: '对公共事务的态度' };
+  const DIM_TAG = { openness: '对新鲜事物', conscientiousness: '做事方式', extraversion: '社交能量', agreeableness: '待人方式', emotionalStability: '情绪', thinkingFeeling: '决策方式', selfPresentation: '自我表达', worldEngagement: '对公共事务' };
+  const DIM_SIDE = { openness: ['喜欢熟悉的事物', '什么新鲜都想试试'], conscientiousness: ['随性而至', '凡事有计划'], extraversion: ['独处回血', '社交充电'], agreeableness: ['直接甚至带刺', '温和好说话'], emotionalStability: ['情绪说来就来', '心态稳如泰山'], thinkingFeeling: ['跟着感觉走', '讲道理摆逻辑'], selfPresentation: ['低调做人', '敢于表现'], worldEngagement: ['专注自己的世界', '关心公共事务'] };
   const dims8 = DATA.dims.slice(0, 8);
   const diffs = dims8.map((dn, i) => ({ dn, diff: Math.abs(uv[i] - contrast.v[i]), u: uv[i], c: contrast.v[i] }));
   const topDiff3 = [...diffs].sort((a, b) => b.diff - a.diff).slice(0, 3);
   const sameDiff1 = [...diffs].sort((a, b) => a.diff - b.diff)[0];
-  const side = (v) => (v <= 2.5 ? '低' : v >= 3.5 ? '高' : '中');
+  const sideDesc = (dn, v) => (v <= 2.5 ? DIM_SIDE[dn][0] : v >= 3.5 ? DIM_SIDE[dn][1] : '居中');
 
   function buildTriSvg() {
     const W = 100, H = 60;
@@ -395,7 +395,7 @@ function showResult() {
     return svg;
   }
 
-  const tempoLabel = tempo === null ? '' : (tempo <= 2.5 ? '你偏向：先长期积累，再拿出完整成果' : tempo >= 3.5 ? '你偏向：边做边被看见，尽早公开' : '你偏向：积累与公开节奏比较平衡');
+  const tempoLabel = tempo === null ? '' : (tempo <= 2.5 ? '你是先攒大招再亮相的人' : tempo >= 3.5 ? '你是边做边亮出来的人' : '你介于两者之间，看场合');
   const sameFame = person.comparisonFacts && person.comparisonFacts.fameAge ? person.comparisonFacts.fameAge.reason || '' : '';
   const lvl = matchLevel(bd);
   const pct = Math.round((1 - bd / 8) * 100);
@@ -432,11 +432,11 @@ function showResult() {
     <div class="match-card">
       <div class="name">历史反差者 · ${contrast.name}</div>
       <div class="meta">${contrast.birthYear} 年出生 · ${contrast.cat === 'science_engineering' ? '科学' : contrast.cat === 'literature' ? '文学' : contrast.cat === 'visual_design' ? '视觉艺术' : '音乐'}</div>
-      <div class="note">你们最不同的地方：</div>
-      <div class="note">${topDiff3.map((t) => '· ' + DIM_DESC[t.dn] + '——你偏' + side(t.u) + '，TA 偏' + side(t.c)).join('<br>')}</div>
-      <div class="note" style="color:#b08d3e">意外相同：你们在「${DIM_LABEL[sameDiff1.dn]}」上几乎一致</div>
+      <div class="note">你们差在哪：</div>
+      <div class="note">${topDiff3.map((t) => '· ' + DIM_TAG[t.dn] + '——你' + sideDesc(t.dn, t.u) + '，TA ' + sideDesc(t.dn, t.c)).join('<br>')}</div>
+      <div class="note" style="color:#b08d3e">但有一件事你们俩几乎一样：「${DIM_TAG[sameDiff1.dn]}」都${sideDesc(sameDiff1.dn, sameDiff1.u)}</div>
     </div>
-    ${tempoLabel ? '<div class="match-card"><div class="note" style="color:#8a857d">被看见的节奏</div><div class="dist">' + tempoLabel + '</div>' + (sameFame ? '<div class="note">' + person.name + '：' + sameFame + '</div>' : '') + '<div class="note" style="color:#b8b2a8">偏好与历史经历的对照，不代表对你的成就时间预测</div></div>' : ''}
+    ${tempoLabel ? '<div class="match-card"><div class="note" style="color:#8a857d">被看见的节奏</div><div class="dist">' + tempoLabel + '</div>' + (sameFame ? '<div class="note">' + person.name + '：' + sameFame + '</div>' : '') + '<div class="note" style="color:#b8b2a8">这只是节奏对照，不是对未来成就的预测</div></div>' : ''}
     <div class="peers">
       <h3>和你同频的历史人物</h3>
       <div class="chips">${proto.members.map((m) => '<span class="chip' + (m === person.name ? ' hl' : '') + '">' + m + '</span>').join('')}</div>
