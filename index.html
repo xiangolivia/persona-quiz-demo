@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>你的历史同频者 · v1.2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #faf9f6; color: #2d2a26; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 24px 20px 60px; }
+  h1 { font-size: 22px; text-align: center; margin-bottom: 6px; }
+  .sub { text-align: center; color: #8a857d; font-size: 13px; margin-bottom: 24px; }
+  .pbar { height: 6px; background: #ece7dc; border-radius: 3px; margin-bottom: 6px; overflow: hidden; }
+  .pbar-fill { height: 100%; background: #b08d3e; border-radius: 3px; transition: width .3s; }
+  .pbar-label { text-align: center; color: #b8b2a8; font-size: 12px; margin-bottom: 18px; }
+  .qcard { background: #fff; border-radius: 16px; padding: 22px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .qnum { color: #b8b2a8; font-size: 12px; margin-bottom: 8px; }
+  .qtext { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+  .opt { display: block; width: 100%; text-align: left; background: #f5f3ee; border: 1.5px solid transparent; border-radius: 10px; padding: 11px 14px; font-size: 14px; color: #2d2a26; margin-bottom: 8px; cursor: pointer; transition: all .15s; }
+  .opt:hover { border-color: #c9b99a; }
+  .opt.sel { background: #efe6d3; border-color: #b08d3e; }
+  .nav { display: flex; gap: 10px; margin-top: 16px; }
+  .navbtn { flex: 1; padding: 13px; font-size: 15px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; }
+  .navbtn.prev { background: #fff; border: 1px solid #ddd6c8; color: #2d2a26; }
+  .navbtn.next { background: #b08d3e; color: #fff; }
+  .navbtn.next:disabled { background: #d8d2c6; cursor: not-allowed; }
+  .navbtn.hidden { visibility: hidden; }
+  .result { display: none; }
+  .proto-badge { text-align: center; background: #2d2a26; color: #f5e9cf; border-radius: 16px; padding: 22px; margin-bottom: 14px; }
+  .proto-badge .tag { font-size: 13px; opacity: .8; }
+  .proto-badge .name { font-size: 26px; font-weight: 700; margin: 6px 0; }
+  .proto-badge .desc { font-size: 12px; opacity: .75; }
+  .match-card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .match-card .name { font-size: 18px; font-weight: 700; }
+  .match-card .meta { font-size: 12px; color: #8a857d; margin-top: 3px; }
+  .match-card .dist { font-size: 13px; color: #b08d3e; margin-top: 6px; font-weight: 600; }
+  .match-card .note { font-size: 12px; color: #8a857d; margin-top: 6px; line-height: 1.5; }
+  .works { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .work { background: #f5f3ee; border-radius: 6px; padding: 3px 8px; font-size: 12px; color: #6b655c; }
+  .map-card { background: #fff; border-radius: 16px; padding: 18px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .map-card h3 { font-size: 14px; margin-bottom: 4px; }
+  .map-card .map-sub { font-size: 12px; color: #8a857d; margin-bottom: 10px; }
+  .map-wrap { position: relative; }
+  #map { width: 100%; height: auto; display: block; border-radius: 10px; background: #faf9f6; }
+  .peers { background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .peers h3 { font-size: 14px; margin-bottom: 10px; color: #8a857d; font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: #f5f3ee; border-radius: 20px; padding: 6px 12px; font-size: 13px; }
+  .chip.hl { background: #efe6d3; }
+  .back { display: block; width: 100%; margin-top: 16px; padding: 12px; background: #fff; border: 1px solid #ddd6c8; border-radius: 12px; cursor: pointer; color: #2d2a26; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>你的历史同频者</h1>
+  <div class="sub">答 18 题，答 20 题，找到和你气场最合的历史人物</div>
+  <div id="quiz">
+    <div class="pbar"><div class="pbar-fill" id="pbarFill" style="width:0%"></div></div>
+    <div class="pbar-label" id="pbarLabel"></div>
+    <div id="qlist"></div>
+    <div class="nav">
+      <button class="navbtn prev" id="prevBtn" onclick="prevPage()">上一页</button>
+      <button class="navbtn next" id="nextBtn" onclick="nextPage()">下一页</button>
+    </div>
+  </div>
+  <div class="result" id="result"></div>
+</div>
+<script>
+const DATA = {"version":4,"createdAt":"2026-08-05","note":"v4: 20 questions (5 pages x 4), umap coords + axis gradients, fixed prototypes","dims":["openness","conscientiousness","extraversion","agreeableness","emotionalStability","thinkingFeeling","selfPresentation","worldEngagement","fameTier"],"alpha":0.8,"prototypeNames":["革命者","魅力明星","长期主义者","入世创作者","隐居学者","痛苦天才","理性革新者","温良敬业者"],"prototypes":[{"id":0,"name":"革命者","desc":"别人说东你说西，后来发现你说的才是对的","center":[4.88,4.13,2.38,3.13,3.63,4.88,2,4.38,3.5],"anchor":"乔治·奥威尔","members":["阿尔伯特·爱因斯坦","玛丽·居里","利奥·西拉德","高登·摩尔","珍妮弗·道德纳","何塞·克莱门特·奥罗斯科","乔治·奥威尔","西蒙娜·德·波伏娃","袁隆平","屠呦呦","杨振宁"],"subTypes":[{"name":"振臂高呼型","desc":"喊口号我在行，还带头那种","members":["乔治·奥威尔","西蒙娜·德·波伏娃","利奥·西拉德","何塞·克莱门特·奥罗斯科"]},{"name":"闷头改变世界型","desc":"不吵不闹，默默把事办了","members":["袁隆平","屠呦呦","高登·摩尔","珍妮弗·道德纳"]},{"name":"立场坚定型","desc":"平时笑呵呵，原则问题寸步不让","members":["阿尔伯特·爱因斯坦","玛丽·居里","杨振宁"]}]},{"id":1,"name":"魅力明星","desc":"组局我是专业的，冷场？不存在的","center":[4.47,3.4,4.13,3.53,2.4,2.13,3.6,2.4,2.07],"anchor":"艾维斯·皮礼士利","members":["迈克尔·杰克逊","爱德华·马奈","焦阿基诺·罗西尼","阿图尔·鲁宾斯坦","艾维斯·皮礼士利","杰奎琳·杜·普蕾","威廉·莎士比亚","弗朗西斯·斯科特·菲茨杰拉德","徐志摩","欧内斯特·海明威","腾格尔","陈琳 (歌手)","李玟","沃尔夫冈·阿马德乌斯·莫扎特","弗朗茨·李斯特","张国荣"],"subTypes":[{"name":"天生舞台型","desc":"灯光一打，我自动开机","members":["迈克尔·杰克逊","艾维斯·皮礼士利","李玟","张国荣","杰奎琳·杜·普蕾","弗朗茨·李斯特"]},{"name":"风流才子型","desc":"有才华，也有魅力","members":["沃尔夫冈·阿马德乌斯·莫扎特","欧内斯特·海明威","徐志摩","弗朗西斯·斯科特·菲茨杰拉德","焦阿基诺·罗西尼","阿图尔·鲁宾斯坦"]},{"name":"圈内之光型","desc":"不抢戏，但全场都在看我","members":["威廉·莎士比亚","爱德华·马奈","腾格尔","陈琳 (歌手)"]}]},{"id":2,"name":"长期主义者","desc":"别人卷的时候我在攒，攒着攒着就赢了","center":[4.81,4.44,2.25,3.5,4.06,4.69,1.88,2.06,3.81],"anchor":"欧文·朗缪尔","members":["罗伯特·波义耳","查尔斯·达尔文","欧文·朗缪尔","阿尔弗雷德·塔斯基","西德尼·布伦纳","丁肇中","高德纳","吉野彰","钱永健","卡塔林·考里科","万籁鸣","J·R·R·托尔金","艾萨克·阿西莫夫","卢乔·丰塔纳","马特·格勒宁","吉多·范罗苏姆","威尔·莱特"],"subTypes":[{"name":"十年磨一剑型","desc":"慢是慢，但认准了就做到底","members":["J·R·R·托尔金","查尔斯·达尔文","高德纳","卡塔林·考里科","万籁鸣"]},{"name":"越老越香型","desc":"陈年佳酿，越品越有","members":["吉野彰","钱永健","丁肇中"]},{"name":"卷自己型","desc":"内卷？我只卷我自己","members":["艾萨克·阿西莫夫","阿尔弗雷德·塔斯基","西德尼·布伦纳","欧文·朗缪尔","罗伯特·波义耳","卢乔·丰塔纳","马特·格勒宁","吉多·范罗苏姆","威尔·莱特"]}]},{"id":3,"name":"入世创作者","desc":"一边写诗一边搬砖，心里有火","center":[4.63,4.44,3.19,3.25,3.06,2.56,3.19,3.75,2.25],"anchor":"大江健三郎","members":["妮娜·西蒙","琼妮·米切尔","崔健","维克多·雨果","老舍","约翰·斯坦贝克","曹禺","金庸","托妮·莫里森","大江健三郎","莫言","玛格丽特·伯克-怀特","罗文","张敬轩","王羽佳","朱塞佩·威尔第","巴金","徐悲鸿"],"subTypes":[{"name":"笔下有火型","desc":"文字是武器，句句带火","members":["维克多·雨果","约翰·斯坦贝克","托妮·莫里森","大江健三郎","老舍","崔健","妮娜·西蒙","琼妮·米切尔"]},{"name":"深耕沃土型","desc":"扎得深，才长得稳","members":["金庸","莫言","巴金","曹禺","徐悲鸿","朱塞佩·威尔第"]},{"name":"台前幕后型","desc":"创作和营业，我全都要","members":["玛格丽特·伯克-怀特","罗文","张敬轩","王羽佳"]}]},{"id":4,"name":"隐居学者","desc":"消息免打扰，是我的人生信条","center":[4.4,4.2,1.2,2.93,2.8,4,1.4,1.33,3.4],"anchor":"路易斯·卡罗","members":["安德烈-马里·安培","鲁道夫·克劳修斯","朱利安·施温格","芭芭拉·赫普沃斯","赵无极","卡尔·车尔尼","路易斯·卡罗","弗朗茨·卡夫卡","木心","高行健","伊凡·希施金","瓦西里·苏里科夫","奥伯利·比亚兹莱","巴尔蒂斯","辛蒂·雪曼","钱钟书","杨绛"],"subTypes":[{"name":"闭关修炼型","desc":"闭关中，勿扰，出关后惊艳全场","members":["弗朗茨·卡夫卡","巴尔蒂斯","辛蒂·雪曼","木心","高行健","钱钟书","杨绛"]},{"name":"心无旁骛型","desc":"专注是超能力，我有","members":["安德烈-马里·安培","鲁道夫·克劳修斯","朱利安·施温格","卡尔·车尔尼","赵无极"]},{"name":"慢工巨匠型","desc":"慢是慢了点，但值得等","members":["芭芭拉·赫普沃斯","伊凡·希施金","瓦西里·苏里科夫","奥伯利·比亚兹莱","路易斯·卡罗"]}]},{"id":5,"name":"痛苦天才","desc":"别人的 emo 是情绪，我的 emo 是作品","center":[4.89,3.22,1.56,2.56,1.56,1.78,1.67,1.33,2.89],"anchor":"弗里德里克·肖邦","members":["文森特·梵高","杰克逊·波洛克","埃德加·爱伦·坡","张爱玲","西德·巴雷特","范晓萱","弗里德里克·肖邦","彼得·伊里奇·柴可夫斯基","克劳德·德彪西","王菲"],"subTypes":[{"name":"深夜写诗型","desc":"凌晨两点的灵感，最浓","members":["文森特·梵高","弗里德里克·肖邦","彼得·伊里奇·柴可夫斯基","克劳德·德彪西"]},{"name":"破碎玫瑰型","desc":"伤口是艺术的入口","members":["杰克逊·波洛克","埃德加·爱伦·坡","西德·巴雷特","张爱玲"]},{"name":"清冷孤高型","desc":"我的世界很安静，但不冷","members":["王菲","范晓萱"]}]},{"id":6,"name":"理性革新者","desc":"不是针对谁，我只是想赢","center":[4.88,4.25,3.13,2.31,3.38,4.63,3.69,3.31,3],"anchor":"雷蒙德·库茨魏尔","members":["伽利略·伽利莱","斯万特·阿瑞尼斯","莱纳斯·鲍林","威廉·肖克利","爱德华·特勒","加来道雄","雷蒙德·库茨魏尔","卡济米尔·马列维奇","杰夫·昆斯","克里斯托夫·潘德雷茨基","阿尔贝·加缪","冈本太郎","菲利普·斯塔克","理查德·瓦格纳","伊戈尔·斯特拉文斯基"],"subTypes":[{"name":"颠覆者型","desc":"规则就是用来打破的","members":["伽利略·伽利莱","莱纳斯·鲍林","理查德·瓦格纳","伊戈尔·斯特拉文斯基","卡济米尔·马列维奇","克里斯托夫·潘德雷茨基"]},{"name":"布道者型","desc":"信我，这事真能成","members":["加来道雄","雷蒙德·库茨魏尔","阿尔贝·加缪","冈本太郎"]},{"name":"孤傲天才型","desc":"不需要理解，只需要结果","members":["威廉·肖克利","爱德华·特勒","杰夫·昆斯","菲利普·斯塔克","斯万特·阿瑞尼斯"]}]},{"id":7,"name":"温良敬业者","desc":"靠谱是刻在骨子里的","center":[3.62,4.31,3.08,4,3.77,2.23,2.08,2.15,3.23],"anchor":"艾伦·亚历山大·米恩","members":["皮埃尔-奥古斯特·雷诺阿","齐白石","李苦禅","森英惠","于贝尔·德·纪梵希","邓丽君","艾伦·亚历山大·米恩","沈从文","顾嘉煇","蒋大为","徐小凤","杜德伟","韩磊","冰心","梁实秋","丰子恺","余华","蒋勋","朱自清","林语堂","张恨水","叶圣陶"],"subTypes":[{"name":"人间小太阳型","desc":"走到哪暖到哪，自带 BGM","members":["邓丽君","冰心","丰子恺","蒋勋","皮埃尔-奥古斯特·雷诺阿","于贝尔·德·纪梵希"]},{"name":"靠谱老黄牛型","desc":"交给我，放心","members":["齐白石","李苦禅","叶圣陶","朱自清","顾嘉煇","徐小凤"]},{"name":"儒雅幽默型","desc":"温和只是表面，段子手在骨子里","members":["梁实秋","林语堂","余华","艾伦·亚历山大·米恩","沈从文","森英惠","蒋大为","韩磊","杜德伟","张恨水"]}]}],"people":[{"name":"阿尔伯特·爱因斯坦","cat":"science_engineering","birthYear":1879,"personId":"person-0314-a47fe0cbfd","v":[5,4,2,4,4,5,2,4,2],"prototype":0,"fameNote":"1905 年奇迹年发表相对论论文（26 岁）","umap":[0.305,0.195]},{"name":"迈克尔·杰克逊","cat":"music","birthYear":1958,"personId":"person-0829-ed93281835","v":[5,4,3,3,2,2,5,4,1],"prototype":1,"fameNote":"5 岁登台，Jackson 5 童年即成名","umap":[0.177,0.647]},{"name":"文森特·梵高","cat":"visual_design","birthYear":1853,"personId":"person-0330-a1b4cd74a5","v":[5,3,1,2,1,1,1,2,5],"prototype":5,"fameNote":"生前几乎无人知晓，死后成名","umap":[0.824,0.392]},{"name":"伽利略·伽利莱","cat":"science_engineering","birthYear":1564,"personId":"person-0215-ba46584a62","v":[5,4,3,2,3,5,3,3,4],"prototype":6,"fameNote":"1610 年（45 岁）《星际信使》发表后闻名全欧","umap":[0.063,0.289]},{"name":"罗伯特·波义耳","cat":"science_engineering","birthYear":1627,"personId":"candidate-seed-0125-q43393","v":[4,4,2,4,4,5,2,2,3],"prototype":2,"fameNote":"1662 年（35 岁）发表波义耳定律","umap":[0.51,0.19]},{"name":"安德烈-马里·安培","cat":"science_engineering","birthYear":1775,"personId":"person-0120-f1799df474","v":[5,4,1,3,2,5,1,2,4],"prototype":4,"fameNote":"1820 年（45 岁）发表安培定律","umap":[0.809,0.2]},{"name":"鲁道夫·克劳修斯","cat":"science_engineering","birthYear":1822,"personId":"person-0102-d74ce4a3b9","v":[4,4,2,3,3,5,2,2,2],"prototype":4,"fameNote":"1850 年（28 岁）提出热力学第二定律","umap":[0.513,0.268]},{"name":"查尔斯·达尔文","cat":"science_engineering","birthYear":1809,"personId":"person-0212-132b146bec","v":[5,4,2,4,4,5,1,2,4],"prototype":2,"fameNote":"1859 年（50 岁）《物种起源》出版成名；思想 29 岁时已成形","umap":[0.551,0.121]},{"name":"斯万特·阿瑞尼斯","cat":"science_engineering","birthYear":1859,"personId":"person-0219-85843a97d1","v":[4,4,3,3,4,5,3,3,2],"prototype":6,"fameNote":"1884 年（25 岁）电离理论博士论文引起学界关注","umap":[0.328,0.359]},{"name":"玛丽·居里","cat":"science_engineering","birthYear":1867,"personId":"person-1107-60bc5f56b7","v":[4,5,1,3,3,5,1,4,3],"prototype":0,"fameNote":"1903 年（36 岁）获诺贝尔物理学奖","umap":[0.615,0.058]},{"name":"欧文·朗缪尔","cat":"science_engineering","birthYear":1881,"personId":"person-0131-3f138cdbcf","v":[5,4,3,3,4,5,2,2,4],"prototype":2,"fameNote":"1932 年（51 岁）获诺贝尔化学奖","umap":[0.42,0.207]},{"name":"利奥·西拉德","cat":"science_engineering","birthYear":1898,"personId":"person-0211-59daa14eff","v":[5,3,3,3,4,5,2,5,3],"prototype":0,"fameNote":"1933 年（35 岁）提出核链式反应概念","umap":[0.206,0.206]},{"name":"莱纳斯·鲍林","cat":"science_engineering","birthYear":1901,"personId":"person-0228-2a4ecdb479","v":[5,4,4,3,4,5,4,5,3],"prototype":6,"fameNote":"1930 年代以共振理论与量子化学闻名","umap":[0.165,0.31]},{"name":"阿尔弗雷德·塔斯基","cat":"science_engineering","birthYear":1901,"personId":"person-0114-851fe4ecb8","v":[5,4,3,3,3,5,2,1,3],"prototype":2,"fameNote":"1933 年（32 岁）发表真值定义论文","umap":[0.464,0.241]},{"name":"威廉·肖克利","cat":"science_engineering","birthYear":1910,"personId":"person-0213-c72c3feb3a","v":[5,4,2,1,2,5,4,3,3],"prototype":6,"fameNote":"1947 年（37 岁）发明晶体管","umap":[0.01,0.403]},{"name":"爱德华·特勒","cat":"science_engineering","birthYear":1908,"personId":"person-0115-ae66e6b2b7","v":[4,5,3,1,3,5,4,5,4],"prototype":6,"fameNote":"战后以氢弹推动者身份闻名","umap":[0,0.332]},{"name":"朱利安·施温格","cat":"science_engineering","birthYear":1918,"personId":"person-0212-55ddec3119","v":[5,4,1,3,4,5,1,1,3],"prototype":4,"fameNote":"1948 年（30 岁）发表重正化理论","umap":[0.742,0.244]},{"name":"西德尼·布伦纳","cat":"science_engineering","birthYear":1927,"personId":"person-0113-b292f9f32f","v":[5,4,3,3,4,5,2,2,4],"prototype":2,"fameNote":"1960 年代以线虫模型建立者身份在学界成名","umap":[0.403,0.197]},{"name":"高登·摩尔","cat":"science_engineering","birthYear":1929,"personId":"person-0103-f69bd7180a","v":[5,4,3,4,5,5,1,4,3],"prototype":0,"fameNote":"1965 年（36 岁）提出摩尔定律","umap":[0.34,0.149]},{"name":"丁肇中","cat":"science_engineering","birthYear":1936,"personId":"person-0127-13b89fd356","v":[4,5,1,3,4,5,2,2,4],"prototype":2,"fameNote":"1976 年（40 岁）获诺贝尔物理学奖","umap":[0.669,0.099]},{"name":"高德纳","cat":"science_engineering","birthYear":1938,"personId":"candidate-seed-0110-q17457","v":[5,5,1,4,5,5,2,1,3],"prototype":2,"fameNote":"1974 年（36 岁）获图灵奖","umap":[0.65,0.171]},{"name":"加来道雄","cat":"science_engineering","birthYear":1947,"personId":"candidate-seed-0124-q486882","v":[5,4,4,4,5,5,4,4,4],"prototype":6,"fameNote":"1990 年代以科普著作闻名","displayExtra":{"notableWorks":["超越时空","不可思议的物理","平行宇宙"],"introNote":"美籍日裔理论物理学家、弦理论研究者，因面向大众的物理科普著作与节目为全球读者所知。"},"umap":[0.196,0.317]},{"name":"雷蒙德·库茨魏尔","cat":"science_engineering","birthYear":1948,"personId":"candidate-seed-0212-q298341","v":[5,4,3,3,4,5,4,3,3],"prototype":6,"fameNote":"1980 年代以技术发明与预言闻名","umap":[0.219,0.348]},{"name":"吉野彰","cat":"science_engineering","birthYear":1948,"personId":"person-0130-bef239c5b6","v":[4,5,2,4,5,5,2,3,5],"prototype":2,"fameNote":"2019 年（71 岁）获诺贝尔化学奖；研究自 1980 年代持续","umap":[0.62,0]},{"name":"钱永健","cat":"science_engineering","birthYear":1952,"personId":"candidate-seed-0201-q200470","v":[5,5,1,3,4,5,1,2,5],"prototype":2,"fameNote":"2008 年（56 岁）获诺贝尔化学奖","umap":[0.718,0.062]},{"name":"卡塔林·考里科","cat":"science_engineering","birthYear":1955,"personId":"person-0117-f2f08c2067","v":[5,5,2,4,4,5,2,3,5],"prototype":2,"fameNote":"2020 年（65 岁）mRNA 疫苗成就被公众熟知","umap":[0.665,0.027]},{"name":"珍妮弗·道德纳","cat":"science_engineering","birthYear":1964,"personId":"person-0219-6a35acf646","v":[5,4,3,3,4,5,3,4,5],"prototype":0,"fameNote":"2020 年（56 岁）获诺贝尔化学奖","umap":[0.12,0.219]},{"name":"爱德华·马奈","cat":"visual_design","birthYear":1832,"personId":"person-0123-100770e324","v":[5,3,4,3,3,3,3,2,3],"prototype":1,"fameNote":"1863 年（31 岁）《草地上的午餐》引发争议成名","umap":[0.386,0.602]},{"name":"皮埃尔-奥古斯特·雷诺阿","cat":"visual_design","birthYear":1841,"personId":"person-0225-7c50e7854c","v":[4,4,4,5,4,1,2,2,4],"prototype":7,"fameNote":"1870 年代印象派画展时期成名","umap":[0.719,0.989]},{"name":"齐白石","cat":"visual_design","birthYear":1864,"personId":"person-0101-539a26c0f8","v":[4,5,2,3,4,2,2,1,5],"prototype":7,"fameNote":"1920 年代衰年变法后享盛名","umap":[0.881,0.799]},{"name":"卡济米尔·马列维奇","cat":"visual_design","birthYear":1878,"personId":"person-0211-652e89ff58","v":[5,4,2,2,3,5,3,3,3],"prototype":6,"fameNote":"1915 年（37 岁）展出《黑方块》","umap":[0.045,0.337]},{"name":"何塞·克莱门特·奥罗斯科","cat":"visual_design","birthYear":1883,"personId":"person-1123-4d91a6ae3b","v":[5,4,2,2,3,4,2,4,4],"prototype":0,"fameNote":"1920 年代墨西哥壁画运动时期成名","umap":[0.023,0.243]},{"name":"李苦禅","cat":"visual_design","birthYear":1899,"personId":"person-0111-72377c228b","v":[4,4,3,4,4,2,2,4,4],"prototype":7,"fameNote":"1940 年代以大写意花鸟享名","umap":[0.627,0.984]},{"name":"万籁鸣","cat":"visual_design","birthYear":1900,"personId":"person-0118-3ffd21d907","v":[5,5,3,3,4,3,2,2,4],"prototype":2,"fameNote":"1941 年（41 岁）《铁扇公主》上映成名","umap":[0.435,0.325]},{"name":"芭芭拉·赫普沃斯","cat":"visual_design","birthYear":1903,"personId":"person-0110-8694b1e308","v":[5,4,1,3,3,4,1,2,4],"prototype":4,"fameNote":"1950 年代国际抽象艺术运动时期成名","umap":[0.795,0.208]},{"name":"杰克逊·波洛克","cat":"visual_design","birthYear":1912,"personId":"person-0128-bd5f61d225","v":[5,2,1,2,1,1,2,1,3],"prototype":5,"fameNote":"1947 年（35 岁）滴画法成名","umap":[0.774,0.453]},{"name":"赵无极","cat":"visual_design","birthYear":1921,"personId":"person-0213-0e8ec540fb","v":[5,4,2,3,3,3,1,2,4],"prototype":4,"fameNote":"1950 年代在巴黎抽象画坛成名","umap":[0.681,0.274]},{"name":"森英惠","cat":"visual_design","birthYear":1926,"personId":"person-0108-b532f54143","v":[4,5,3,4,4,3,3,2,4],"prototype":7,"fameNote":"1965 年纽约时装发布会后国际成名","umap":[0.842,0.826]},{"name":"于贝尔·德·纪梵希","cat":"visual_design","birthYear":1927,"personId":"person-0220-9e8fa4e4d9","v":[4,4,3,4,4,3,1,2,2],"prototype":7,"fameNote":"1952 年（25 岁）首场发布秀成名","umap":[0.801,0.855]},{"name":"杰夫·昆斯","cat":"visual_design","birthYear":1955,"personId":"person-0121-b95ae2221e","v":[5,4,4,2,4,4,5,2,3],"prototype":6,"fameNote":"1980 年代中期以波普雕塑成名","umap":[0.161,0.41]},{"name":"卡尔·车尔尼","cat":"music","birthYear":1791,"personId":"person-0221-a84fda9139","v":[3,5,2,4,4,4,1,1,3],"prototype":4,"fameNote":"1820 年代以钢琴教学体系闻名维也纳","umap":[1,0.78]},{"name":"焦阿基诺·罗西尼","cat":"music","birthYear":1792,"personId":"person-0229-ae99acfe67","v":[4,3,4,4,3,3,3,2,2],"prototype":1,"fameNote":"1816 年（24 岁）《塞维利亚的理发师》成名","displayExtra":{"notableWorks":["威廉·退尔","塞维利亚的理发师","灰姑娘"],"introNote":"意大利歌剧作曲家。《威廉·退尔》序曲是古典音乐中最著名的旋律之一。"},"umap":[0.492,0.713]},{"name":"阿图尔·鲁宾斯坦","cat":"music","birthYear":1887,"personId":"person-0128-acdc97818d","v":[4,3,5,4,3,1,4,3,2],"prototype":1,"fameNote":"1900 年代初期以钢琴神童与青年演奏家成名","umap":[0.446,0.738]},{"name":"妮娜·西蒙","cat":"music","birthYear":1933,"personId":"person-0221-e264cc4919","v":[5,4,3,2,2,2,3,4,2],"prototype":3,"fameNote":"1959 年（26 岁）《I Loves You, Porgy》成名","umap":[0.132,0.593]},{"name":"克里斯托夫·潘德雷茨基","cat":"music","birthYear":1933,"personId":"birth-1123-1933-","v":[5,4,3,3,4,4,3,3,2],"prototype":6,"fameNote":"1960 年（27 岁）《广岛受难者的挽歌》获奖成名","umap":[0.273,0.445]},{"name":"艾维斯·皮礼士利","cat":"music","birthYear":1935,"personId":"person-0108-7d501b07a0","v":[5,3,5,4,2,2,4,3,2],"prototype":1,"fameNote":"1956 年（21 岁）《Heartbreak Hotel》爆红","umap":[0.386,0.708]},{"name":"琼妮·米切尔","cat":"music","birthYear":1943,"personId":"birth-1107-1943-","v":[5,4,3,2,2,2,3,3,2],"prototype":3,"fameNote":"1969 年（26 岁）首张专辑后成名","umap":[0.143,0.578]},{"name":"杰奎琳·杜·普蕾","cat":"music","birthYear":1945,"personId":"person-0126-f2dcfa5cea","v":[4,4,4,4,3,1,3,2,2],"prototype":1,"fameNote":"1965 年（20 岁）录制埃尔加协奏曲成名","umap":[0.547,0.817]},{"name":"邓丽君","cat":"music","birthYear":1953,"personId":"person-0129-5b866e2011","v":[3,4,3,5,3,2,2,2,2],"prototype":7,"fameNote":"1960 年代末（约 20 岁）在华语乐坛成名","umap":[0.863,0.993]},{"name":"崔健","cat":"music","birthYear":1961,"personId":"person-0802-ef8e0c0c9a","v":[5,4,3,2,4,3,3,4,2],"prototype":3,"fameNote":"1986 年（25 岁）《一无所有》首唱成名","umap":[0.197,0.512]},{"name":"威廉·莎士比亚","cat":"literature","birthYear":1564,"personId":"person-0426-fe2b318b1e","v":[5,3,3,4,3,3,3,2,3],"prototype":1,"fameNote":"1590 年代在伦敦戏剧界成名","umap":[0.411,0.586]},{"name":"维克多·雨果","cat":"literature","birthYear":1802,"personId":"person-0226-ca43f0418d","v":[5,4,4,3,3,2,4,5,2],"prototype":3,"fameNote":"1831 年（29 岁）《巴黎圣母院》成名","umap":[0.152,0.638]},{"name":"埃德加·爱伦·坡","cat":"literature","birthYear":1809,"personId":"person-0119-a8a5cd9f03","v":[5,3,1,2,1,4,2,1,3],"prototype":5,"fameNote":"1845 年（36 岁）《乌鸦》发表后闻名","umap":[0.762,0.393]},{"name":"路易斯·卡罗","cat":"literature","birthYear":1832,"personId":"person-0127-94136dfb83","v":[5,4,1,3,3,4,1,1,3],"prototype":4,"fameNote":"1865 年（33 岁）《爱丽丝梦游仙境》出版","umap":[0.749,0.291]},{"name":"艾伦·亚历山大·米恩","cat":"literature","birthYear":1882,"personId":"person-0118-d983bf4c40","v":[4,4,3,4,3,3,2,2,4],"prototype":7,"fameNote":"1926 年（44 岁）《小熊维尼》出版成名","umap":[0.691,0.867]},{"name":"弗朗茨·卡夫卡","cat":"literature","birthYear":1883,"personId":"candidate-p3b-0703-kafka-birth","v":[5,5,1,3,1,4,1,1,5],"prototype":4,"fameNote":"生前几乎无名，死后成名（与梵高同类的边界样本）","umap":[0.825,0.197]},{"name":"J·R·R·托尔金","cat":"literature","birthYear":1892,"personId":"person-0103-fdf7485db2","v":[5,5,2,4,4,4,1,2,5],"prototype":2,"fameNote":"1954 年（62 岁）《魔戒》出版成名，大器晚成典型","umap":[0.669,0.033]},{"name":"弗朗西斯·斯科特·菲茨杰拉德","cat":"literature","birthYear":1896,"personId":"person-0924-29044a3949","v":[5,2,4,3,1,2,4,2,2],"prototype":1,"fameNote":"1920 年（24 岁）《人间天堂》成名","umap":[0.395,0.682]},{"name":"徐志摩","cat":"literature","birthYear":1897,"personId":"person-0115-00d808a2ec","v":[5,3,4,3,2,1,3,2,2],"prototype":1,"fameNote":"1922 年（25 岁）归国后以新诗闻名","umap":[0.418,0.633]},{"name":"老舍","cat":"literature","birthYear":1899,"personId":"person-0203-45fe4ceae1","v":[4,4,3,4,2,3,2,4,3],"prototype":3,"fameNote":"1936 年（37 岁）《骆驼祥子》成名","umap":[0.57,0.93]},{"name":"欧内斯特·海明威","cat":"literature","birthYear":1899,"personId":"person-0721-469c4823d8","v":[5,4,4,2,1,3,4,3,2],"prototype":1,"fameNote":"1926 年（27 岁）《太阳照常升起》成名","umap":[0.105,0.557]},{"name":"约翰·斯坦贝克","cat":"literature","birthYear":1902,"personId":"person-0227-78f27c9986","v":[4,4,3,4,3,2,3,4,3],"prototype":3,"fameNote":"1939 年（37 岁）《愤怒的葡萄》成名","umap":[0.56,0.94]},{"name":"沈从文","cat":"literature","birthYear":1902,"personId":"person-1228-39c9a25a69","v":[4,4,2,4,3,2,1,3,3],"prototype":7,"fameNote":"1934 年（32 岁）《边城》成名","umap":[0.677,0.951]},{"name":"乔治·奥威尔","cat":"literature","birthYear":1903,"personId":"person-0625-c5368713eb","v":[5,4,2,3,3,5,2,5,4],"prototype":0,"fameNote":"1945 年（42 岁）《动物庄园》成名","umap":[0.069,0.194]},{"name":"西蒙娜·德·波伏娃","cat":"literature","birthYear":1908,"personId":"person-0109-3e2b57e7c2","v":[5,5,3,3,3,5,3,5,4],"prototype":0,"fameNote":"1949 年（41 岁）《第二性》出版成名","umap":[0.063,0.251]},{"name":"曹禺","cat":"literature","birthYear":1910,"personId":"person-0924-964fee398d","v":[5,4,3,3,3,3,3,3,2],"prototype":3,"fameNote":"1934 年（24 岁）《雷雨》发表成名","umap":[0.245,0.58]},{"name":"阿尔贝·加缪","cat":"literature","birthYear":1913,"personId":"person-1107-0fe69fd54e","v":[5,4,3,2,2,5,3,4,2],"prototype":6,"fameNote":"1942 年（29 岁）《局外人》出版成名","umap":[0.054,0.454]},{"name":"张爱玲","cat":"literature","birthYear":1920,"personId":"person-0930-efdde78979","v":[5,4,1,3,2,3,1,1,2],"prototype":5,"fameNote":"1943 年（23 岁）《沉香屑·第一炉香》成名","umap":[0.736,0.412]},{"name":"艾萨克·阿西莫夫","cat":"literature","birthYear":1920,"personId":"person-0102-a83c7100de","v":[5,5,2,3,4,5,3,3,3],"prototype":2,"fameNote":"1950 年（30 岁）《我，机器人》成名","umap":[0.187,0.294]},{"name":"金庸","cat":"literature","birthYear":1924,"personId":"person-0310-9b3f45ae18","v":[5,5,3,4,3,3,3,3,3],"prototype":3,"fameNote":"1959 年（35 岁）创办《明报》连载武侠小说成名","umap":[0.296,0.888]},{"name":"木心","cat":"literature","birthYear":1927,"personId":"person-0214-1107541143","v":[4,4,1,3,2,3,1,1,5],"prototype":4,"fameNote":"1980 年代移居纽约后于海外文坛成名，晚年为大陆读者熟知","umap":[0.811,0.233]},{"name":"托妮·莫里森","cat":"literature","birthYear":1931,"personId":"person-0218-a36e860f5f","v":[5,5,3,4,4,2,3,4,3],"prototype":3,"fameNote":"1970 年（39 岁）首部小说《最蓝的眼睛》出版","umap":[0.265,0.909]},{"name":"大江健三郎","cat":"literature","birthYear":1935,"personId":"person-0131-b48b5f8ae9","v":[5,5,3,3,3,3,3,4,2],"prototype":3,"fameNote":"1958 年（23 岁）《饲育》获芥川奖","umap":[0.208,0.86]},{"name":"高行健","cat":"literature","birthYear":1940,"personId":"candidate-seed-0104-q18143","v":[5,4,1,2,3,3,2,2,5],"prototype":4,"fameNote":"2000 年（60 岁）获诺贝尔文学奖","umap":[0.763,0.235]},{"name":"莫言","cat":"literature","birthYear":1955,"personId":"candidate-seed-0217-q8998","v":[5,4,3,4,4,3,3,3,2],"prototype":3,"fameNote":"1981 年（26 岁）发表首篇作品，1985 年《透明的红萝卜》成名","umap":[0.307,0.519]},{"name":"伊凡·希施金","cat":"visual_design","birthYear":1832,"personId":"person-0113-f3705a6d78","v":[3,5,1,3,3,4,2,1,3],"prototype":4,"fameNote":"1860 年代加入巡回展览画派后成名","umap":[0.976,0.67]},{"name":"瓦西里·苏里科夫","cat":"visual_design","birthYear":1848,"personId":"person-0124-961ff585d1","v":[3,4,1,3,2,4,2,1,3],"prototype":4,"fameNote":"1881 年（33 岁）《近卫军临刑的早晨》成名","umap":[0.939,0.617]},{"name":"奥伯利·比亚兹莱","cat":"visual_design","birthYear":1872,"personId":"person-0821-856d8ed6d5","v":[5,4,1,3,2,4,3,1,2],"prototype":4,"fameNote":"1894 年（22 岁）为《莎乐美》插图成名","umap":[0.695,0.387]},{"name":"卢乔·丰塔纳","cat":"visual_design","birthYear":1899,"personId":"person-0219-73e5f2eca5","v":[5,4,3,3,4,4,3,2,4],"prototype":2,"fameNote":"1949 年（50 岁）空间主义宣言后成名","umap":[0.358,0.286]},{"name":"玛格丽特·伯克-怀特","cat":"visual_design","birthYear":1904,"personId":"person-0614-a2f8201293","v":[4,5,4,3,3,4,3,4,2],"prototype":3,"fameNote":"1930 年（26 岁）成为《财富》杂志首位女摄影师","umap":[0.231,0.928]},{"name":"巴尔蒂斯","cat":"visual_design","birthYear":1908,"personId":"person-0229-937a008d5e","v":[4,4,1,2,3,4,1,1,3],"prototype":4,"fameNote":"1934 年（30 岁）首次个展成名","umap":[0.817,0.312]},{"name":"冈本太郎","cat":"visual_design","birthYear":1911,"personId":"person-0226-d2e13c1966","v":[5,4,4,2,3,4,4,4,3],"prototype":6,"fameNote":"1950 年（39 岁）前卫艺术主张确立","umap":[0.108,0.432]},{"name":"菲利普·斯塔克","cat":"visual_design","birthYear":1949,"personId":"person-0118-960349efad","v":[5,4,4,3,4,4,4,3,3],"prototype":6,"fameNote":"1983 年（34 岁）为密特朗设计爱丽舍宫内部后成名","umap":[0.216,0.402]},{"name":"马特·格勒宁","cat":"visual_design","birthYear":1954,"personId":"person-0215-4b574ac393","v":[5,4,3,3,4,4,2,2,3],"prototype":2,"fameNote":"1989 年（35 岁）《辛普森一家》开播成名","umap":[0.406,0.25]},{"name":"辛蒂·雪曼","cat":"visual_design","birthYear":1954,"personId":"person-0119-c2f393ac7f","v":[5,4,1,3,4,4,1,1,2],"prototype":4,"fameNote":"1980 年（26 岁）《无题电影剧照》系列成名","umap":[0.728,0.299]},{"name":"吉多·范罗苏姆","cat":"visual_design","birthYear":1956,"personId":"person-0131-f207d46d1f","v":[5,4,2,4,4,5,2,3,3],"prototype":2,"fameNote":"1991 年（35 岁）Python 发布，2000 年代成主流","umap":[0.383,0.164]},{"name":"威尔·莱特","cat":"visual_design","birthYear":1960,"personId":"person-0120-b102ad942d","v":[5,4,3,4,4,5,2,2,2],"prototype":2,"fameNote":"1989 年（29 岁）《模拟城市》成名","umap":[0.424,0.26]},{"name":"顾嘉煇","cat":"music","birthYear":1931,"personId":"person-0225-62d24c5a7d","v":[4,5,3,4,4,3,1,2,3],"prototype":7,"fameNote":"1961 年（30 岁）《不了情》等作品成名","umap":[0.894,0.856]},{"name":"罗文","cat":"music","birthYear":1945,"personId":"person-0212-f2cbbb91eb","v":[4,5,4,4,4,2,4,3,3],"prototype":3,"fameNote":"1970 年代中期粤语歌坛成名","umap":[0.344,0.967]},{"name":"西德·巴雷特","cat":"music","birthYear":1946,"personId":"person-0106-8d766c441b","v":[5,2,1,2,1,1,1,1,2],"prototype":5,"fameNote":"1967 年（21 岁）平克·弗洛伊德首专成名","umap":[0.746,0.458]},{"name":"蒋大为","cat":"music","birthYear":1947,"personId":"candidate-china-0122-7165371174","v":[3,4,4,4,4,2,3,2,3],"prototype":7,"fameNote":"1980 年（33 岁）春晚《牡丹之歌》成名","umap":[0.817,0.936]},{"name":"徐小凤","cat":"music","birthYear":1949,"personId":"person-0101-641322cf60","v":[3,5,3,4,4,2,2,2,2],"prototype":7,"fameNote":"1970 年代中期粤语歌坛成名","umap":[0.906,0.951]},{"name":"腾格尔","cat":"music","birthYear":1960,"personId":"person-0115-4b05bb6060","v":[4,4,4,4,3,2,3,3,3],"prototype":1,"fameNote":"1990 年（30 岁）《蒙古人》成名","umap":[0.58,0.873]},{"name":"杜德伟","cat":"music","birthYear":1962,"personId":"person-0210-c48ca5f4f7","v":[3,4,4,4,4,2,3,2,3],"prototype":7,"fameNote":"1990 年代初期华语乐坛成名","umap":[0.836,0.969]},{"name":"韩磊","cat":"music","birthYear":1968,"personId":"person-0223-cba9969e81","v":[3,4,3,3,4,2,3,2,3],"prototype":7,"fameNote":"2001 年（33 岁）《向天再借五百年》成名","umap":[0.83,0.924]},{"name":"陈琳 (歌手)","cat":"music","birthYear":1970,"personId":"person-0131-0f62250c15","v":[3,3,3,3,1,2,3,2,2],"prototype":1,"fameNote":"1993 年（23 岁）《你的柔情我永远不懂》成名","umap":[0.572,0.708]},{"name":"李玟","cat":"music","birthYear":1975,"personId":"person-0117-6dfa1be6ec","v":[4,5,5,5,1,2,4,3,2],"prototype":1,"fameNote":"1998 年（23 岁）《Di Da Di》爆红","umap":[0.437,0.876]},{"name":"范晓萱","cat":"music","birthYear":1977,"personId":"person-0227-cfbf53ed4b","v":[4,3,2,3,2,2,2,2,2],"prototype":5,"fameNote":"1998 年（21 岁）《健康歌》全民走红","umap":[0.667,0.531]},{"name":"张敬轩","cat":"music","birthYear":1981,"personId":"person-0201-126d1f8a42","v":[4,5,3,4,3,3,3,3,2],"prototype":3,"fameNote":"2002 年（21 岁）《断点》成名","umap":[0.33,0.947]},{"name":"王羽佳","cat":"music","birthYear":1987,"personId":"person-0210-b86ae58c5b","v":[4,5,4,4,4,3,4,2,2],"prototype":3,"fameNote":"2007 年（20 岁）临时代打演出成名","umap":[0.359,0.96]},{"name":"沃尔夫冈·阿马德乌斯·莫扎特","cat":"music","birthYear":1756,"personId":"candidate-supp-wolfgang-amadeus-mozart","v":[5,3,4,3,3,2,4,2,1],"prototype":1,"fameNote":"6 岁即以神童身份巡回演出闻名","umap":[0.375,0.686]},{"name":"弗里德里克·肖邦","cat":"music","birthYear":1810,"personId":"candidate-supp-fr-d-ric-chopin","v":[5,4,2,3,2,1,2,1,2],"prototype":5,"fameNote":"1831 年（21 岁）抵达巴黎成名","umap":[0.674,0.484]},{"name":"彼得·伊里奇·柴可夫斯基","cat":"music","birthYear":1840,"personId":"candidate-supp-pyotr-ilyich-tchaikovsky","v":[5,4,3,4,1,1,2,2,4],"prototype":5,"fameNote":"1880 年代（约 40 岁）国际成名","umap":[0.674,0.597]},{"name":"弗朗茨·李斯特","cat":"music","birthYear":1811,"personId":"candidate-supp-franz-liszt","v":[5,3,5,3,3,2,5,3,1],"prototype":1,"fameNote":"12 岁少年神童巡回演出成名","umap":[0.362,0.689]},{"name":"朱塞佩·威尔第","cat":"music","birthYear":1813,"personId":"candidate-supp-giuseppe-verdi","v":[4,5,3,3,4,2,3,5,2],"prototype":3,"fameNote":"1842 年（29 岁）《纳布科》成名","umap":[0.239,0.93]},{"name":"克劳德·德彪西","cat":"music","birthYear":1862,"personId":"candidate-supp-claude-debussy","v":[5,4,2,2,3,2,2,1,3],"prototype":5,"fameNote":"1894 年（32 岁）《牧神午后》成名","umap":[0.679,0.398]},{"name":"理查德·瓦格纳","cat":"music","birthYear":1813,"personId":"person-0522-ca785a3ae4","v":[5,5,3,1,2,4,5,3,3],"prototype":6,"fameNote":"1850 年（37 岁）《罗恩格林》成名","umap":[0.005,0.4]},{"name":"伊戈尔·斯特拉文斯基","cat":"music","birthYear":1882,"personId":"candidate-supp-igor-stravinsky","v":[5,5,3,2,3,4,3,2,3],"prototype":6,"fameNote":"1913 年（31 岁）《春之祭》首演引发骚动成名","umap":[0.075,0.352]},{"name":"袁隆平","cat":"science_engineering","birthYear":1930,"personId":"person-0907-93d09f7aad","v":[4,5,3,5,5,4,1,5,4],"prototype":0,"fameNote":"1981 年（51 岁）获国家特等发明奖，后成全国知名","umap":[0.557,0.003]},{"name":"屠呦呦","cat":"science_engineering","birthYear":1930,"personId":"candidate-supp-tu-youyou","v":[4,5,1,4,4,5,1,4,5],"prototype":0,"fameNote":"2015 年（85 岁）获诺贝尔奖，大器晚成极端样本","umap":[0.636,0.001]},{"name":"杨振宁","cat":"science_engineering","birthYear":1922,"personId":"person-0922-1ab255855f","v":[5,4,3,3,4,5,3,4,3],"prototype":0,"fameNote":"1957 年（35 岁）获诺贝尔物理学奖","umap":[0.203,0.285]},{"name":"巴金","cat":"literature","birthYear":1904,"personId":"candidate-supp-ba-jin","v":[4,4,3,4,3,3,2,4,2],"prototype":3,"fameNote":"1931 年（27 岁）《家》出版成名","umap":[0.585,0.943]},{"name":"冰心","cat":"literature","birthYear":1900,"personId":"candidate-supp-bing-xin","v":[3,4,3,5,4,2,2,3,2],"prototype":7,"fameNote":"1923 年（23 岁）《繁星》《春水》成名","umap":[0.853,1]},{"name":"梁实秋","cat":"literature","birthYear":1903,"personId":"candidate-supp-liang-shiqiu","v":[3,5,3,4,4,3,2,2,4],"prototype":7,"fameNote":"1940 年代《雅舍小品》成名","umap":[0.939,0.873]},{"name":"钱钟书","cat":"literature","birthYear":1910,"personId":"candidate-supp-qian-zhongshu","v":[4,5,1,2,4,4,1,1,3],"prototype":4,"fameNote":"1946 年（36 岁）《围城》出版成名","umap":[0.842,0.295]},{"name":"杨绛","cat":"literature","birthYear":1911,"personId":"person-0717-15f9c9faf7","v":[3,4,1,4,4,3,1,1,3],"prototype":4,"fameNote":"1930-40 年代以剧作与翻译知名","umap":[0.967,0.75]},{"name":"丰子恺","cat":"visual_design","birthYear":1898,"personId":"person-1109-e3e30d3933","v":[4,4,3,5,4,2,2,3,3],"prototype":7,"fameNote":"1920 年代以漫画成名","umap":[0.701,0.966]},{"name":"徐悲鸿","cat":"visual_design","birthYear":1895,"personId":"person-0719-0714ef84a9","v":[4,5,4,4,4,3,3,4,3],"prototype":3,"fameNote":"1920 年代成名","umap":[0.291,0.947]},{"name":"王菲","cat":"music","birthYear":1969,"personId":"person-0808-d52c8812f1","v":[5,4,1,3,2,2,1,2,2],"prototype":5,"fameNote":"1989 年（20 岁）出道成名","umap":[0.704,0.43]},{"name":"张国荣","cat":"music","birthYear":1956,"personId":"person-0912-7bec2660f0","v":[4,4,4,4,1,2,4,3,2],"prototype":1,"fameNote":"1983 年（27 岁）《风继续吹》成名","umap":[0.476,0.802]},{"name":"余华","cat":"literature","birthYear":1960,"personId":"candidate-supp-yu-hua","v":[4,4,3,4,4,3,3,3,3],"prototype":7,"fameNote":"1992 年（32 岁）《活着》成名","umap":[0.631,0.894]},{"name":"蒋勋","cat":"literature","birthYear":1947,"personId":"candidate-seed-0108-q9473589","v":[3,4,3,5,4,2,2,3,4],"prototype":7,"fameNote":"1990 年代美学讲座闻名","umap":[0.774,0.996]},{"name":"朱自清","cat":"literature","birthYear":1898,"personId":"person-1122-9a1489c822","v":[3,5,3,4,4,3,2,2,3],"prototype":7,"fameNote":"1920 年代散文成名","umap":[0.949,0.894]},{"name":"林语堂","cat":"literature","birthYear":1895,"personId":"person-1010-0cf7bcdd68","v":[5,4,4,4,4,3,3,2,3],"prototype":7,"fameNote":"1930 年代《吾国与吾民》等成名","umap":[0.338,0.517]},{"name":"张恨水","cat":"literature","birthYear":1895,"personId":"person-0518-0f528d3a29","v":[4,5,2,4,4,3,1,2,3],"prototype":7,"fameNote":"1920-30 年代成名","umap":[0.954,0.82]},{"name":"叶圣陶","cat":"literature","birthYear":1894,"personId":"person-1028-1893703b8c","v":[3,5,3,5,4,3,2,3,3],"prototype":7,"fameNote":"1920 年代成名","umap":[0.934,0.936]}],"questions":[{"id":"q01","dimension":"openness","prompt":"周五晚上，你更可能——","options":[{"text":"健身早睡，雷打不动","score":1},{"text":"窝在沙发上看老电影","score":2},{"text":"去一家没去过的新店","score":4},{"text":"来一场说走就走的旅行","score":5}]},{"id":"q02","dimension":"openness","prompt":"别人评价你的想法，最常见的是——","options":[{"text":"太规矩了","score":1},{"text":"挺靠谱的","score":2},{"text":"有点意思","score":4},{"text":"太疯狂了","score":5}]},{"id":"q03","dimension":"conscientiousness","prompt":"明早要交的东西，你通常——","options":[{"text":"文档依旧一片空白——富贵险中求","score":1},{"text":"今晚熬夜肝完","score":2},{"text":"昨天做了一半","score":4},{"text":"上周就交完了","score":5}]},{"id":"q04","dimension":"conscientiousness","prompt":"你的房间或桌面，最接近——","options":[{"text":"能考古——不知道是商周的，还是上周的","score":1},{"text":"乱中有序，我知道在哪","score":2},{"text":"定期收拾，整整齐齐","score":4},{"text":"万物归位，一尘不染","score":5}]},{"id":"q05","dimension":"extraversion","prompt":"周末休息，你更想——","options":[{"text":"一个人待着回血","score":1},{"text":"撸猫遛狗","score":2},{"text":"约一两个朋友","score":4},{"text":"组局，人越多越好","score":5}]},{"id":"q06","dimension":"extraversion","prompt":"聚会中的你，通常是——","options":[{"text":"在角落伪装成一朵蘑菇","score":1},{"text":"只跟熟人聊","score":2},{"text":"主动找人聊","score":4},{"text":"全场气氛组","score":5}]},{"id":"q07","dimension":"agreeableness","prompt":"别人观点和你明显不一样，你——","options":[{"text":"直接开怼","score":1},{"text":"心里不服但懒得说","score":2},{"text":"先听完再说","score":4},{"text":"他说得对，我改（这次真的）","score":5}]},{"id":"q08","dimension":"agreeableness","prompt":"朋友请你帮忙搬家，你——","options":[{"text":"假装没看到消息——已读不回","score":1},{"text":"找个理由推掉","score":2},{"text":"去帮半天忙","score":4},{"text":"全程主力，还带午饭","score":5}]},{"id":"q09","dimension":"emotionalStability","prompt":"手机摔碎屏的那一刻，你——","options":[{"text":"当场崩溃","score":1},{"text":"气个半小时","score":2},{"text":"骂两句，贴膜继续用","score":4},{"text":"面无表情下单换屏","score":5}]},{"id":"q10","dimension":"emotionalStability","prompt":"被当众批评之后，你——","options":[{"text":"当场翻脸或掉眼泪","score":1},{"text":"一晚上睡不着，脑子里重播三遍","score":2},{"text":"难受，但第二天就好","score":4},{"text":"转头就忘，干饭要紧","score":5}]},{"id":"q11","dimension":"thinkingFeeling","prompt":"买大件之前，你——","options":[{"text":"看对眼就买","score":1},{"text":"凭感觉，再比一比","score":2},{"text":"看测评看评价","score":4},{"text":"拉表格逐项打分","score":5}]},{"id":"q12","dimension":"thinkingFeeling","prompt":"看电影时的你，更接近——","options":[{"text":"全程泪目","score":1},{"text":"眼眶一热但忍住","score":2},{"text":"共情，顺便分析手法","score":4},{"text":"边看边挑逻辑漏洞","score":5}]},{"id":"q13","dimension":"selfPresentation","prompt":"拿了个小奖，你——","options":[{"text":"谁也不说，深藏功与名","score":1},{"text":"只告诉家人","score":2},{"text":"发个朋友圈","score":4},{"text":"请客庆祝，全平台晒一遍","score":5}]},{"id":"q14","dimension":"selfPresentation","prompt":"新买了一件很拉风的衣服，你——","options":[{"text":"压箱底，不敢穿","score":1},{"text":"日常穿，绝口不提","score":2},{"text":"见朋友才穿","score":4},{"text":"全平台晒图，就差登报","score":5}]},{"id":"q15","dimension":"worldEngagement","prompt":"看到社会热点新闻，你通常——","options":[{"text":"与我无关，划走","score":1},{"text":"心里有数但不表态","score":2},{"text":"和朋友讨论几句","score":4},{"text":"转发评论参与，义不容辞","score":5}]},{"id":"q16","dimension":"worldEngagement","prompt":"你更欣赏哪种人——","options":[{"text":"深居简出的隐士","score":1},{"text":"独善其身的匠人","score":2},{"text":"积极发声的创作者","score":4},{"text":"投身一线改变世界的人","score":5}]},{"id":"q17","dimension":"fameTier","prompt":"你的人生节奏更像——","options":[{"text":"从小就是别人家的孩子","score":1},{"text":"大学之后才开窍","score":2},{"text":"三十岁才找到方向","score":4},{"text":"越老越吃香，好戏在后头","score":5}]},{"id":"q18","dimension":"fameTier","prompt":"有人夸你潜力大，你心里想——","options":[{"text":"我早该被看到了","score":1},{"text":"还行吧，会努力的","score":2},{"text":"谢谢，等我证明","score":4},{"text":"慢火出好菜，不急","score":5}]},{"id":"q19","dimension":"extraversion","prompt":"团建遇到一桌陌生人拼桌，你——","options":[{"text":"换个桌","score":1},{"text":"安静干饭","score":2},{"text":"礼貌搭话","score":4},{"text":"半小时后全场都认识我","score":5}]},{"id":"q20","dimension":"emotionalStability","prompt":"计划好的周末突然被加班打断，你——","options":[{"text":"原地爆炸","score":1},{"text":"郁闷一整天","score":2},{"text":"抱怨两句，接受现实","score":4},{"text":"趁机把下周的事也做了","score":5}]}],"axis":{"x":{"dim":"extraversion","labelLow":"更独处","labelHigh":"更外向","grad":[-2.287,2.224],"r2":0.57},"y":{"dim":"thinkingFeeling","labelLow":"更感性","labelHigh":"更理性","grad":[-0.667,-2.908],"r2":0.52}}};
+const DIM_ICON = { openness:'💡', conscientiousness:'📋', extraversion:'🎉', agreeableness:'🤝', emotionalStability:'🧘', thinkingFeeling:'🧠', selfPresentation:'✨', worldEngagement:'🌍', fameTier:'⏳' };
+const PAGE_SIZE = 4;
+const TOTAL_QUESTIONS = DATA.questions.length;
+const TOTAL_PAGES = Math.ceil(TOTAL_QUESTIONS / PAGE_SIZE);
+const answers = {};
+let page = 0;
+
+const qlist = document.getElementById('qlist');
+const pbarFill = document.getElementById('pbarFill');
+const pbarLabel = document.getElementById('pbarLabel');
+
+function pageQuestions(pg) {
+  const start = pg * PAGE_SIZE;
+  return DATA.questions.slice(start, start + PAGE_SIZE);
+}
+
+function render() {
+  qlist.innerHTML = '';
+  pageQuestions(page).forEach((q, localIdx) => {
+    const qi = page * PAGE_SIZE + localIdx;
+    const card = document.createElement('div');
+    card.className = 'qcard';
+    card.innerHTML = `
+      <div class="qnum">${DIM_ICON[q.dimension]} 第 ${qi + 1} 题 / ${TOTAL_QUESTIONS}</div>
+      <div class="qtext">${q.prompt}</div>
+      ${q.options.map((o, oi) => '<button class="opt' + (answers[qi] === oi ? ' sel' : '') + '" data-qi="' + qi + '" data-oi="' + oi + '">' + o.text + '</button>').join('')}
+    `;
+    qlist.appendChild(card);
+  });
+  qlist.querySelectorAll('.opt').forEach((b) => {
+    b.addEventListener('click', () => {
+      const qi = +b.dataset.qi, oi = +b.dataset.oi;
+      answers[qi] = oi;
+      render();
+    });
+  });
+
+  const done = Object.keys(answers).length;
+  pbarFill.style.width = Math.round((done / TOTAL_QUESTIONS) * 100) + '%';
+  pbarLabel.textContent = '第 ' + (page + 1) + ' / ' + TOTAL_PAGES + ' 页 · 已完成 ' + done + ' / ' + TOTAL_QUESTIONS;
+
+  const pageDone = pageQuestions(page).every((q, li) => answers[page * PAGE_SIZE + li] !== undefined);
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.disabled = !pageDone;
+  nextBtn.textContent = page === TOTAL_PAGES - 1 ? '生成结果' : '下一页';
+  document.getElementById('prevBtn').className = 'navbtn prev' + (page === 0 ? ' hidden' : '');
+}
+
+function prevPage() { if (page > 0) { page--; render(); window.scrollTo({ top: 0 }); } }
+function nextPage() {
+  const pageDone = pageQuestions(page).every((q, li) => answers[page * PAGE_SIZE + li] !== undefined);
+  if (!pageDone) return;
+  if (page < TOTAL_PAGES - 1) { page++; render(); window.scrollTo({ top: 0 }); }
+  else showResult();
+}
+
+function wdist(a, b) {
+  let s = 0, wsum = 0;
+  for (let i = 0; i < a.length; i++) {
+    const w = 1 + DATA.alpha * Math.abs(a[i] - 3);
+    s += w * (a[i] - b[i]) ** 2;
+    wsum += w;
+  }
+  return Math.sqrt(s / wsum);
+}
+
+function matchLevel(d) {
+  if (d < 1.3) return { label: '高', line: '历史上几乎就是你的平行版本' };
+  if (d < 2.2) return { label: '中', line: '和你同频度很高，气场接近' };
+  return { label: '独特', line: '你太独特了，历史上没有完全像你的人——最接近的是' };
+}
+
+const PROTOTYPE_COLORS = ['#c0392b', '#d4a017', '#2e86c1', '#16a085', '#7d6e83', '#8e44ad', '#e67e22', '#27ae60'];
+
+function buildMapSvg(uv, userPos, top5) {
+  const W = 100, H = 80;
+  const ax = DATA.axis;
+  // 轴方向：grad 指向维度高分方向
+  const xDir = ax.x.grad[0] >= 0 ? 1 : -1;
+  const yDir = ax.y.grad[1] >= 0 ? 1 : -1;
+
+  // —— 视口变换：以用户点为对称中心构建 viewBox（用户点 100% 居中，点阵全覆盖）——
+  const SHIFT = 0.85;
+  const shiftX = (0.5 - userPos[0]) * SHIFT;
+  const shiftY = (0.5 - userPos[1]) * SHIFT;
+  const uAbsX = userPos[0] + shiftX;   // 用户点平移后绝对位置
+  const uAbsY = userPos[1] + shiftY;
+  const PAD = 0.04;
+  const vxMin = uAbsX - (Math.max(userPos[0], 1 - userPos[0]) + PAD);
+  const vxMax = uAbsX + (Math.max(userPos[0], 1 - userPos[0]) + PAD);
+  const vyMin = uAbsY - (Math.max(userPos[1], 1 - userPos[1]) + PAD);
+  const vyMax = uAbsY + (Math.max(userPos[1], 1 - userPos[1]) + PAD);
+  const vxW = vxMax - vxMin, vyH = vyMax - vyMin;
+  const map = (px, py) => [
+    ((px + shiftX - vxMin) / vxW) * W,
+    ((py + shiftY - vyMin) / vyH) * H,
+  ];
+  const uxy = map(userPos[0], userPos[1]);
+
+  let svg = '<svg id="map" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+  // 轴参考线（淡）
+  svg += '<line x1="' + (xDir > 0 ? 2 : W - 2) + '" y1="' + (H / 2) + '" x2="' + (xDir > 0 ? W - 2 : 2) + '" y2="' + (H / 2) + '" stroke="#d8d2c6" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>';
+  svg += '<line x1="' + (W / 2) + '" y1="' + (yDir > 0 ? 2 : H - 2) + '" x2="' + (W / 2) + '" y2="' + (yDir > 0 ? H - 2 : 2) + '" stroke="#d8d2c6" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>';
+  // X 轴标签（左=低分端，右=高分端）
+  svg += '<text x="' + (xDir > 0 ? 2 : W - 2) + '" y="' + (H / 2 - 1.5) + '" font-size="2.4" fill="#9a938a" text-anchor="' + (xDir > 0 ? 'start' : 'end') + '">' + ax.x.labelLow + ' ←</text>';
+  svg += '<text x="' + (xDir > 0 ? W - 2 : 2) + '" y="' + (H / 2 - 1.5) + '" font-size="2.4" fill="#9a938a" text-anchor="' + (xDir > 0 ? 'end' : 'start') + '">→ ' + ax.x.labelHigh + '</text>';
+  // Y 轴标签（下=低分端，上=高分端）
+  svg += '<text x="' + (W / 2) + '" y="' + (yDir > 0 ? 4 : H - 3) + '" font-size="2.4" fill="#9a938a" text-anchor="middle">' + ax.y.labelHigh + ' ↑</text>';
+  svg += '<text x="' + (W / 2) + '" y="' + (yDir > 0 ? H - 3 : 5) + '" font-size="2.4" fill="#9a938a" text-anchor="middle">↓ ' + ax.y.labelLow + '</text>';
+  // 人物点：top5 高亮标名（贪心避让：6 候选位 + 矩形重叠检测），其余小点
+  const labeled = top5.slice(0, 5);
+  const labelSet = new Set(labeled.map((t) => t.p.name));
+  const usedLabels = [];
+  const FS = 2.7;                    // 字号
+  const LH = FS + 1.2;               // 行高（含白边）
+  const textW = (s) => s.length * (FS + 0.2);
+  function overlaps(box) {
+    for (const u of usedLabels) {
+      if (box.x < u.x + u.w + 1.2 && box.x + box.w + 1.2 > u.x && box.y < u.y + LH && box.y + LH > u.y) return true;
+    }
+    return false;
+  }
+  DATA.people.forEach((p) => {
+    const [mx, my] = map(p.umap[0], p.umap[1]);
+    const px = mx * W, py = my * H;
+    const color = PROTOTYPE_COLORS[p.prototype];
+    const isTop = labelSet.has(p.name);
+    svg += '<circle cx="' + px + '" cy="' + py + '" r="' + (isTop ? 2.2 : 1.0) + '" fill="' + color + '" opacity="' + (isTop ? 0.95 : 0.35) + '"/>';
+    if (isTop) {
+      const w = textW(p.name);
+      const left = px - w / 2, right = px + w / 2;
+      const cand = (x, y, anchor, boxX, boxY) => {
+        // 边界钳制（避免文字出界）
+        let cx = x, cy = y, bx = boxX, by = boxY;
+        if (anchor === 'middle') { cx = Math.max(1.5 + w / 2, Math.min(W - 1.5 - w / 2, cx)); bx = cx - w / 2; }
+        else if (anchor === 'start') { cx = Math.max(1.5, Math.min(W - 1.5 - w, cx)); bx = cx; }
+        else { cx = Math.max(1.5 + w, Math.min(W - 1.5, cx)); bx = cx - w; }
+        cy = Math.max(2, Math.min(H - 1.5, cy)); by = cy;
+        return { x: cx, y: cy, anchor, boxX: bx, boxY: by };
+      };
+      const candidates = [
+        cand(px - w / 2, py - LH - 0.6, 'middle', left, py - LH - 0.6),
+        cand(px - w / 2, py + 3.2, 'middle', left, py + 3.2),
+        cand(px + 2.6, py - 1.2, 'start', right + 1.2, py - LH / 2),
+        cand(px + 2.6, py + LH - 0.8, 'start', right + 1.2, py + LH - 0.8),
+        cand(px - 2.6, py - 1.2, 'end', left - 1.2 - w, py - LH / 2),
+        cand(px - 2.6, py + LH - 0.8, 'end', left - 1.2 - w, py + LH - 0.8),
+      ];
+      let chosen = null;
+      for (const c of candidates) {
+        const box = { x: Math.min(c.boxX, c.boxX + w), y: c.boxY, w: Math.abs(w), h: LH };
+        if (!overlaps(box)) { chosen = c; break; }
+      }
+      if (!chosen) chosen = candidates[0];
+      const box = { x: Math.min(chosen.boxX, chosen.boxX + w), y: chosen.boxY, w: Math.abs(w), h: LH };
+      usedLabels.push(box);
+      svg += '<text x="' + chosen.x + '" y="' + chosen.y + '" font-size="' + FS + '" fill="#2d2a26" font-weight="600" stroke="#faf9f6" stroke-width="0.9" paint-order="stroke" text-anchor="' + chosen.anchor + '">' + p.name + '</text>';
+    }
+  });
+  // 用户位置（变换后）
+  const ux = uxy[0] * W, uy = uxy[1] * H;
+  svg += '<circle cx="' + ux + '" cy="' + uy + '" r="6" fill="#d4a017" opacity="0.18"/>';
+  svg += '<circle cx="' + ux + '" cy="' + uy + '" r="3.4" fill="#d4a017" stroke="#fff" stroke-width="0.8"/>';
+  svg += '</svg>';
+  return svg;
+}
+
+function showResult() {
+  const sums = new Array(9).fill(0), cnt = new Array(9).fill(0);
+  DATA.questions.forEach((q, qi) => {
+    const di = DATA.dims.indexOf(q.dimension);
+    sums[di] += q.options[answers[qi]].score; cnt[di]++;
+  });
+  const uv = sums.map((s, i) => s / cnt[i]);
+
+  let bd = Infinity, bi = 0;
+  DATA.people.forEach((p, i) => { const d = wdist(uv, p.v); if (d < bd) { bd = d; bi = i; } });
+  const person = DATA.people[bi];
+
+  let pc = 0, pbd = Infinity;
+  DATA.prototypes.forEach((pt, i) => { const d = wdist(uv, pt.center); if (d < pbd) { pbd = d; pc = i; } });
+  const proto = DATA.prototypes[pc];
+  const same = proto.members.filter((m) => m !== person.name);
+
+  // top5 最近邻（含用户位置近似）
+  const top5 = DATA.people.map((p, i) => ({ p, d: wdist(uv, p.v) })).sort((a, b) => a.d - b.d).slice(0, 5);
+  const wSum = top5.reduce((s, t) => s + 1 / (t.d + 0.15), 0);
+  const userPos = top5.reduce((acc, t) => {
+    const w = 1 / (t.d + 0.15);
+    acc[0] += w * t.p.umap[0]; acc[1] += w * t.p.umap[1];
+    return acc;
+  }, [0, 0]).map((v) => v / wSum);
+
+  const lvl = matchLevel(bd);
+  const pct = Math.round((1 - bd / 8) * 100);
+  const extra = person.displayExtra || {};
+  const sub = proto.subTypes.find((s) => s.members.includes(person.name));
+
+  document.getElementById('quiz').style.display = 'none';
+  const r = document.getElementById('result');
+  r.style.display = 'block';
+  r.innerHTML = `
+    <div class="proto-badge">
+      <div class="tag">你的历史同频原型</div>
+      <div class="name">「${proto.name}」</div>
+      <div class="desc">${proto.desc} · 同类 ${proto.members.length} 位</div>
+    </div>
+    <div class="match-card">
+      <div class="name">${person.name}</div>
+      <div class="meta">${person.birthYear} 年出生 · ${person.cat === 'science_engineering' ? '科学' : person.cat === 'literature' ? '文学' : person.cat === 'visual_design' ? '视觉艺术' : '音乐'}</div>
+      <div class="dist">${sub ? '『' + sub.name + '』' + sub.desc : proto.name}</div>
+      <div class="dist">同频度 ${pct}% · ${lvl.label}匹配 —— ${lvl.line}${lvl.label === '独特' ? ' ' + person.name : ''}</div>
+      ${extra.introNote ? '<div class="note">' + extra.introNote + '</div>' : ''}
+      ${person.fameNote ? '<div class="note">' + person.fameNote + '</div>' : ''}
+      ${(extra.notableWorks && extra.notableWorks.length) ? '<div class="works">' + extra.notableWorks.map((w) => '<span class="work">' + w + '</span>').join('') + '</div>' : ''}
+    </div>
+    <div class="map-card">
+      <h3>你在历史人格地图上的位置</h3>
+      <div class="map-sub">金色圆点是你 —— 离你最近的是 ${top5.map((t) => t.p.name).join('、')}</div>
+      <div class="map-wrap">${buildMapSvg(uv, userPos, top5)}</div>
+    </div>
+    <div class="peers">
+      <h3>和你同频的历史人物</h3>
+      <div class="chips">${proto.members.map((m) => '<span class="chip' + (m === person.name ? ' hl' : '') + '">' + m + '</span>').join('')}</div>
+    </div>
+    <button class="back" onclick="location.reload()">再测一次</button>
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
